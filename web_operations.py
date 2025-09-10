@@ -3,6 +3,8 @@ import requests
 import os
 from urllib.parse import quote_plus
 
+from snapshot_operations import poll_snapshot_status, download_snapshot
+
 load_dotenv()
 
 dataset_id = "gd_lvz8ah06191smkebj4"
@@ -68,11 +70,20 @@ def _trigger_and_download_snapshot(trigger_url, params, data, operation_name="op
         print(f"{operation_name} trigger did not return a snapshot_id.")
         return None
     
-    # TODO: poll a snapshot
+
+    if not poll_snapshot_status(snapshot_id):
+        print(f"{operation_name} snapshot processing failed or timed out.")
+        return None
+    
+    raw_data = download_snapshot(snapshot_id)
+    if not raw_data:
+        print(f"{operation_name} data download failed.")
+        return None
+    return raw_data
 
 
 
-def reddit_search(keyword, date = "All Time", sort_by = "Hot", num_of_posts = 75):
+def reddit_search_api(keyword, date = "All time", sort_by = "Hot", num_of_posts = 75):
     trigger_url = "https://api.brightdata.com/datasets/v3/trigger"
 
     params = {
@@ -91,10 +102,18 @@ def reddit_search(keyword, date = "All Time", sort_by = "Hot", num_of_posts = 75
         }
     ]
 
-    raw_data = None
+    raw_data = _trigger_and_download_snapshot(trigger_url, params, data, operation_name="Reddit search")
 
     if not raw_data:
         return None
     
-    # TODO: parse raw data
-    return None
+    parsed_data = []
+    for post in raw_data:
+        parsed_post = {
+            "title": post.get("title"),
+            "url": post.get("url"),
+            
+        }
+        parsed_data.append(parsed_post)
+
+    return {"parsed_posts": parsed_data, "total_found": len(parsed_data)}
