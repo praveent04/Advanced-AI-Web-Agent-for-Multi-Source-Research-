@@ -7,6 +7,8 @@ from langchain.chat_models import init_chat_model
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
 
+from web_operations import serp_search
+
 load_dotenv()
 
 #llm = init_chat_model("gpt-4o")
@@ -29,15 +31,16 @@ def google_search(state: State):
     user_question = state.get("user_question", "")
     print(f"Searching Google for: {user_question}")
 
-    google_results = []
-
+    google_results = serp_search(user_question, engine="google")
+     
     return {"google_results": google_results}
 
 def bing_search(state: State):
     user_question = state.get("user_question", "")
     print(f"Searching Bing for: {user_question}")
 
-    bing_results = []
+    bing_results = serp_search(user_question, engine="bing")
+     
 
     return {"bing_results": bing_results}
 
