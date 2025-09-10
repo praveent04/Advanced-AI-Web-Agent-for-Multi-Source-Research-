@@ -6,12 +6,19 @@ from langgraph.graph.message import add_messages
 from langchain.chat_models import init_chat_model
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
-
+from langchain_google_genai import ChatGoogleGenerativeAI
 from web_operations import serp_search, reddit_search_api
+from prompts import (PromptTemplates, 
+                     get_google_analysis_messages, 
+                     get_bing_analysis_messages, 
+                     get_reddit_analysis_messages,
+                     get_reddit_url_analysis_messages, 
+                     get_synthesis_messages
+                     )
 
 load_dotenv()
 
-#llm = init_chat_model("gpt-4o")
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp") 
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
@@ -25,6 +32,11 @@ class State(TypedDict):
     bing_analysis: str | None
     reddit_analysis: str | None
     final_answer: str | None
+
+
+class RedditURLAnalysis(BaseModel):
+    selected_urls: List[str] =Field(description = "List of Reddit URLs that contain valuable information for answering the user's question")
+
 
 
 def google_search(state: State):
@@ -54,9 +66,33 @@ def reddit_search(state: State):
     return {"reddit_results": reddit_results}
 
 def analyze_reddit_posts(state: State):
-    return {"selected_reddit_url": []}
+    user_question = state.get("user_question", "")
+    reddit_results = state.get("reddit_results", "")
+
+    if not reddit_results:
+        print("No Reddit results found.")
+        return {"selected_reddit_url": []}
+    
+    structured_llm = llm.with_structured_output(RedditURLAnalysis)
+    messages = get_reddit_url_analysis_messages(user_question, reddit_results)
+
+    try:
+        analysis = structured_llm.invoke(messages)
+        selected_urls = analysis.selected_urls
+
+        print("Selected Reddit URLs:")
+        for i, url in enumerate(selected_urls, start=1):
+            print(f"Selected Reddit URL {i}: {url}")
+    
+    except Exception as e:
+        print(f"Error during Reddit URL analysis: {e}")
+        selected_urls = []
+
+    
+    return {"selected_reddit_url": selected_urls}
 
 def retrieve_reddit_posts(state: State):
+    print("")
     return {"reddit_post_data": []}
 
 def analyze_google_results(state: State):
@@ -129,7 +165,7 @@ def run_chatbot():
             "final_answer": None,
         }
 
-        print ("\n Starting parallel research process...")
+        print ("\nStarting parallel research process...")
         print("Launching Google, Bing, and Reddit searches...\n")
         final_state = graph.invoke(state)
 

@@ -103,19 +103,27 @@ def reddit_search_api(keyword, date = "All time", sort_by = "Hot", num_of_posts 
     ]
 
     raw_data = _trigger_and_download_snapshot(trigger_url, params, data, operation_name="Reddit search")
-
+    
     if not raw_data:
-        return None
+        print(f"Reddit search failed for keyword: {keyword}. Returning empty results.")
+        return {"parsed_posts": [], "total_found": 0}
+    
+    # Add type check and debugging
+    if not isinstance(raw_data, list):
+        print(f"Unexpected data type from API: {type(raw_data)}. Content: {raw_data[:500]}...")  # Truncate for readability
+        return {"parsed_posts": [], "total_found": 0}
     
     parsed_data = []
     for post in raw_data:
-        parsed_post = {
-            "title": post.get("title"),
-            "url": post.get("url"),
-            
-        }
-        parsed_data.append(parsed_post)
-
+        if isinstance(post, dict):  # Ensure each item is a dict
+            parsed_post = {
+                "title": post.get("title", "No title"),
+                "url": post.get("url", "No URL"),
+            }
+            parsed_data.append(parsed_post)
+        else:
+            print(f"Skipping invalid post item: {post}")
+    
     return {"parsed_posts": parsed_data, "total_found": len(parsed_data)}
 
 
