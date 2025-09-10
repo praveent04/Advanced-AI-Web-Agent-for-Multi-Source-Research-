@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 load_dotenv()
 
-llm = init_chat_model("gpt-4")
+#llm = init_chat_model("gpt-4o")
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
@@ -103,7 +103,7 @@ graph = graph_builder.compile()
 
 def run_chatbot():
     print("Multi-Source Research Agent")
-    print("Type 'exit to quit\n'")
+    print("Type 'exit' to quit\n")
 
     while True:
         user_input = input("Ask me anything: ")
